@@ -173,7 +173,25 @@ body {
 /* Drag & Drop Styles */
 .input-panel.drag-over {
     border: 2px dashed var(--accent-cyan);
-    background: rgba(0, 217, 255, 0.05);
+    background: rgba(0, 217, 255, 0.08);
+    position: relative;
+}
+
+.input-panel.drag-over::after {
+    content: '📂 释放文件以上传';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-secondary);
+    color: var(--accent-cyan);
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
 }
 
 .input-header {

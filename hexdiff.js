@@ -80,6 +80,12 @@ class HexDiffViewer {
             btn.addEventListener('click', (e) => this.loadSample(e.target.dataset.panel));
         });
         
+        // 文件上传按钮
+        this.bindFileUpload();
+        
+        // 拖拽文件
+        this.bindDragDrop();
+        
         // 输入实时解析并自动对比（防抖）
         this.debounceTimer = null;
         const autoCompare = () => {
@@ -104,6 +110,14 @@ class HexDiffViewer {
         this.elements.formatB.addEventListener('change', () => {
             this.updateByteCount('B');
             autoCompare();
+        });
+        
+        // 折叠输入按钮
+        const toggleInputBtn = document.getElementById('toggleInputBtn');
+        const inputSection = document.querySelector('.input-section');
+        toggleInputBtn.addEventListener('click', () => {
+            inputSection.classList.toggle('collapsed');
+            toggleInputBtn.textContent = inputSection.classList.contains('collapsed') ? '↕ 展开输入' : '↕ 折叠输入';
         });
         
         // 每行字节数
@@ -159,6 +173,119 @@ class HexDiffViewer {
                 this.copySelection('hex');
             }
         });
+    }
+    
+    bindFileUpload() {
+        ['A', 'B'].forEach(panel => {
+            const uploadBtn = document.getElementById(`uploadBtn${panel}`);
+            const fileInput = document.getElementById(`fileInput${panel}`);
+            const closeBtn = document.querySelector(`.close-file-btn[data-panel="${panel}"]`);
+            
+            // 上传按钮点击
+            uploadBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 文件选择
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.loadFile(file, panel);
+                }
+            });
+            
+            // 关闭文件显示
+            closeBtn.addEventListener('click', () => {
+                this.clearFileDisplay(panel);
+            });
+        });
+    }
+    
+    bindDragDrop() {
+        ['A', 'B'].forEach(panel => {
+            const dropZone = document.getElementById(`dropZone${panel}`);
+            
+            // 阻止默认拖拽行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            
+            // 拖入时高亮
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('drag-over');
+                }, false);
+            });
+            
+            // 拖出时取消高亮
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('drag-over');
+                }, false);
+            });
+            
+            // 处理文件放入
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.loadFile(files[0], panel);
+                }
+            }, false);
+        });
+    }
+    
+    loadFile(file, panel) {
+        const fileNameEl = document.getElementById(`fileName${panel}`);
+        const fileOverlay = document.getElementById(`fileOverlay${panel}`);
+        const inputEl = this.elements[`input${panel}`];
+        
+        // 显示文件名
+        fileNameEl.textContent = file.name;
+        fileOverlay.classList.add('active');
+        
+        // 读取文件
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const arrayBuffer = e.target.result;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            // 转换为十六进制字符串
+            const hexString = Array.from(uint8Array)
+                .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
+                .join(' ');
+            
+            // 设置输入内容
+            inputEl.value = hexString;
+            
+            // 更新字节计数并触发对比
+            this.updateByteCount(panel);
+            this.compare();
+        };
+        
+        reader.onerror = () => {
+            alert(`读取文件失败: ${file.name}`);
+            this.clearFileDisplay(panel);
+        };
+        
+        // 读取为 ArrayBuffer
+        reader.readAsArrayBuffer(file);
+    }
+    
+    clearFileDisplay(panel) {
+        const fileOverlay = document.getElementById(`fileOverlay${panel}`);
+        const fileInput = document.getElementById(`fileInput${panel}`);
+        const inputEl = this.elements[`input${panel}`];
+        
+        fileOverlay.classList.remove('active');
+        fileInput.value = '';
+        inputEl.value = '';
+        
+        this.updateByteCount(panel);
+        this.compare();
     }
     
     bindSelectionEvents() {
