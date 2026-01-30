@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HexDump Diff - 二进制数据对比工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>⬡ HexDump Diff</h1>
+            <div class="header-controls">
+                <div class="bytes-per-row">
+                    <label>每行字节数:</label>
+                    <select id="bytesPerRow">
+                        <option value="8">8</option>
+                        <option value="16" selected>16</option>
+                        <option value="32">32</option>
+                    </select>
+                </div>
+                <button id="compareBtn" class="action-btn primary">⚡ 对比</button>
+                <button id="clearBtn" class="action-btn">清空</button>
+                <button id="swapBtn" class="action-btn">⇄ 交换</button>
+                <button id="toggleInputBtn" class="action-btn">↕ 折叠输入</button>
+                <button id="exportDiff" class="action-btn">导出差异</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 输入面板 -->
+            <div class="input-section">
+                <div class="input-panel" id="dropZoneA">
+                    <div class="input-header">
+                        <span class="panel-label">数据 A</span>
+                        <select id="formatA" class="format-select">
+                            <option value="auto">自动</option>
+                            <option value="hex">Hex</option>
+                            <option value="hexdump">Hexdump</option>
+                            <option value="c_array">C数组</option>
+                            <option value="base64">Base64</option>
+                        </select>
+                        <span class="byte-count" id="byteCountA">0 字节</span>
+                        <input type="file" id="fileInputA" class="hidden-file-input" style="display:none">
+                        <button class="icon-btn" id="uploadBtnA" title="上传文件">📂</button>
+                        <button class="sample-btn" data-panel="A">示例</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea id="inputA" class="hex-input" placeholder="支持: FF 00 AB | hexdump | C数组 | Base64&#10;也可以直接拖入文件"></textarea>
+                        <div class="file-overlay" id="fileOverlayA">
+                            <div class="file-info">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name" id="fileNameA"></span>
+                                <button class="close-file-btn" data-panel="A">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-panel" id="dropZoneB">
+                    <div class="input-header">
+                        <span class="panel-label">数据 B</span>
+                        <select id="formatB" class="format-select">
+                            <option value="auto">自动</option>
+                            <option value="hex">Hex</option>
+                            <option value="hexdump">Hexdump</option>
+                            <option value="c_array">C数组</option>
+                            <option value="base64">Base64</option>
+                        </select>
+                        <span class="byte-count" id="byteCountB">0 字节</span>
+                        <input type="file" id="fileInputB" class="hidden-file-input" style="display:none">
+                        <button class="icon-btn" id="uploadBtnB" title="上传文件">📂</button>
+                        <button class="sample-btn" data-panel="B">示例</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea id="inputB" class="hex-input" placeholder="支持: FF 00 AB | hexdump | C数组 | Base64&#10;也可以直接拖入文件"></textarea>
+                        <div class="file-overlay" id="fileOverlayB">
+                            <div class="file-info">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name" id="fileNameB"></span>
+                                <button class="close-file-btn" data-panel="B">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 对比结果面板 -->
+            <div class="result-section" id="resultSection">
+                <div class="result-header">
+                    <span>对比结果</span>
+                    <div class="result-controls">
+                        <button id="jumpToOffset" class="small-btn">跳转偏移</button>
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="搜索 (FF 00)">
+                            <button id="searchBtn" class="small-btn">搜索</button>
+                            <button id="prevMatch" class="small-btn">◀</button>
+                            <button id="nextMatch" class="small-btn">▶</button>
+                            <span id="matchInfo"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="diff-view">
+                    <div class="panel left-panel">
+                        <div class="panel-title">
+                            <span>A</span>
+                            <span class="file-size" id="sizeA"></span>
+                        </div>
+                        <div class="hex-container" id="hexContainerA">
+                            <div class="hex-viewport" id="viewportA">
+                                <div class="hex-content" id="contentA"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="diff-gutter" id="diffGutter">
+                        <canvas id="diffCanvas"></canvas>
+                    </div>
+
+                    <div class="panel right-panel">
+                        <div class="panel-title">
+                            <span>B</span>
+                            <span class="file-size" id="sizeB"></span>
+                        </div>
+                        <div class="hex-container" id="hexContainerB">
+                            <div class="hex-viewport" id="viewportB">
+                                <div class="hex-content" id="contentB"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="stats">
+                <span id="totalDiffs">差异: 0 字节</span>
+                <span id="currentOffset">偏移: 0x00000000</span>
+                <span id="selectionInfo"></span>
+            </div>
+            <div class="legend">
+                <span class="legend-item"><span class="color-box added"></span>仅在B中</span>
+                <span class="legend-item"><span class="color-box removed"></span>仅在A中</span>
+                <span class="legend-item"><span class="color-box modified"></span>已修改</span>
+                <span class="legend-item"><span class="color-box match"></span>搜索匹配</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+        <div class="menu-item" id="copyHex">复制 Hex</div>
+        <div class="menu-item" id="copyHexNoSpace">复制 Hex (无空格)</div>
+        <div class="menu-item" id="copyAscii">复制 ASCII</div>
+        <div class="menu-item" id="copyCArray">复制 C 数组</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" id="selectAll">全选</div>
+    </div>
+
+    <div id="jumpModal" class="modal">
+        <div class="modal-content">
+            <h3>跳转到偏移地址</h3>
+            <input type="text" id="jumpOffset" placeholder="输入十六进制偏移 (如: 0x1000 或 1000)">
+            <div class="modal-buttons">
+                <button id="jumpConfirm">跳转</button>
+                <button id="jumpCancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="hexdiff.js"></script>
+</body>
+</html>
